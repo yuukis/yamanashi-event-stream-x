@@ -96,6 +96,10 @@ jobs:
         "
 
     - name: SAM build test
+      env:
+        AWS_DEFAULT_REGION: us-east-1
+        AWS_ACCESS_KEY_ID: dummy
+        AWS_SECRET_ACCESS_KEY: dummy
       run: |
         # Install AWS SAM CLI
         pip install aws-sam-cli
