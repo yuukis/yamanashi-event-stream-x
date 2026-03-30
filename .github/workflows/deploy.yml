@@ -1,0 +1,110 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  AWS_REGION: ap-northeast-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      id-token: write  # Required for AWS OIDC
+      contents: read
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('consumer/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r consumer/requirements.txt
+        pip install aws-sam-cli
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        # Option 1: Use OIDC (recommended)
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
+        # Option 2: Use access keys (fallback)
+        # aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        # aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    - name: Update X API credentials in Parameter Store
+      run: |
+        # Update X API credentials
+        aws ssm put-parameter \
+          --name "/yamanashi-event-stream-x/x-api-key" \
+          --value "${{ secrets.X_API_KEY }}" \
+          --type "SecureString" \
+          --overwrite
+        
+        aws ssm put-parameter \
+          --name "/yamanashi-event-stream-x/x-api-secret" \
+          --value "${{ secrets.X_API_SECRET }}" \
+          --type "SecureString" \
+          --overwrite
+        
+        aws ssm put-parameter \
+          --name "/yamanashi-event-stream-x/x-access-token" \
+          --value "${{ secrets.X_ACCESS_TOKEN }}" \
+          --type "SecureString" \
+          --overwrite
+        
+        aws ssm put-parameter \
+          --name "/yamanashi-event-stream-x/x-access-token-secret" \
+          --value "${{ secrets.X_ACCESS_TOKEN_SECRET }}" \
+          --type "SecureString" \
+          --overwrite
+
+    - name: SAM build
+      run: |
+        sam build --template template.yaml
+
+    - name: SAM deploy
+      run: |
+        sam deploy \
+          --template-file .aws-sam/build/template.yaml \
+          --stack-name yamanashi-event-stream-x \
+          --parameter-overrides \
+            TableName=posted_events \
+            LogLevel=INFO \
+          --capabilities CAPABILITY_IAM \
+          --region ${{ env.AWS_REGION }} \
+          --no-confirm-changeset \
+          --no-fail-on-empty-changeset \
+          --resolve-s3
+
+    - name: Get deployment outputs
+      run: |
+        # Get stack outputs
+        aws cloudformation describe-stacks \
+          --stack-name yamanashi-event-stream-x \
+          --region ${{ env.AWS_REGION }} \
+          --query 'Stacks[0].Outputs' \
+          --output table
+
+    - name: Deployment summary
+      run: |
+        echo "## 🚀 Deployment Complete" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- **Stack Name**: yamanashi-event-stream-x" >> $GITHUB_STEP_SUMMARY
+        echo "- **Region**: ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
