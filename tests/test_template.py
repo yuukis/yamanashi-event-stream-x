@@ -69,13 +69,13 @@ def test_date_formatting():
         
         # Test different year (2027) - should include year
         result_2027 = app.format_started_at('2027-02-01T09:00:00+09:00')
-        expected_2027 = '2027/2/1(土) 9:00-'
+        expected_2027 = '2027/2/1(月) 9:00-'
         assert result_2027 == expected_2027, f"Expected '{expected_2027}', got '{result_2027}'"
         print(f"✅ Different year format: {result_2027}")
         
         # Test past year (2025) - should include year
         result_2025 = app.format_started_at('2025-12-15T14:30:00+09:00')
-        expected_2025 = '2025/12/15(日) 14:30-'
+        expected_2025 = '2025/12/15(月) 14:30-'
         assert result_2025 == expected_2025, f"Expected '{expected_2025}', got '{result_2025}'"
         print(f"✅ Past year format: {result_2025}")
         
@@ -114,7 +114,7 @@ def test_post_text_generation():
             '🆕✨山梨の新着イベント情報',
             '',
             'シンプルイベント',
-            '🗓️4/1(火) 23:30-',
+            '🗓️4/1(水) 23:30-',
             'https://example.com/minimal'
         ]
         expected_minimal = '\n'.join(expected_lines)

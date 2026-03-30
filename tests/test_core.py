@@ -33,10 +33,10 @@ def format_started_at(started_at: str) -> str:
         # Format with or without year depending on current year
         if jst_dt.year != current_year:
             # Include year when different from current year
-            formatted = f"{jst_dt.year}/{jst_dt.month}/{jst_dt.day}({weekday}) {jst_dt.hour:02d}:{jst_dt.minute:02d}-"
+            formatted = f"{jst_dt.year}/{jst_dt.month}/{jst_dt.day}({weekday}) {jst_dt.hour}:{jst_dt.minute:02d}-"
         else:
             # Use month/day format for current year
-            formatted = f"{jst_dt.month}/{jst_dt.day}({weekday}) {jst_dt.hour:02d}:{jst_dt.minute:02d}-"
+            formatted = f"{jst_dt.month}/{jst_dt.day}({weekday}) {jst_dt.hour}:{jst_dt.minute:02d}-"
         
         return formatted
     except Exception as e:
