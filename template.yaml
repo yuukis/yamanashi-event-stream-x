@@ -1,0 +1,114 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'Yamanashi Event Stream X Consumer - AWS Lambda app for posting Yamanashi events to X'
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: python3.12
+
+Parameters:
+  TableName:
+    Type: String
+    Default: posted_events
+    Description: DynamoDB table name for storing posted events
+  LogLevel:
+    Type: String
+    Default: INFO
+    AllowedValues: [DEBUG, INFO, WARNING, ERROR, CRITICAL]
+    Description: Logging level for Lambda function
+
+Resources:
+  # DynamoDB Table for tracking posted events
+  PostedEventsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: uid
+          AttributeType: S
+      KeySchema:
+        - AttributeName: uid
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Application
+          Value: yamanashi-event-stream-x
+        - Key: Component
+          Value: posted-events-tracker
+
+  # Lambda Function for processing events
+  EventConsumerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: yamanashi-event-stream-x-consumer
+      CodeUri: consumer/
+      Handler: app.lambda_handler
+      Description: 'Consumer Lambda for posting Yamanashi events to X'
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TableName
+          LOG_LEVEL: !Ref LogLevel
+          # X API credentials from Parameter Store
+          X_API_KEY: '{{resolve:ssm:/yamanashi-event-stream-x/x-api-key:1}}'
+          X_API_SECRET: '{{resolve:ssm:/yamanashi-event-stream-x/x-api-secret:1}}'
+          X_ACCESS_TOKEN: '{{resolve:ssm:/yamanashi-event-stream-x/x-access-token:1}}'
+          X_ACCESS_TOKEN_SECRET: '{{resolve:ssm:/yamanashi-event-stream-x/x-access-token-secret:1}}'
+      Events:
+        YamanashiEventCreated:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source:
+                - yamanashi.tech.events
+              detail-type:
+                - event.created
+            Target:
+              Id: YamanashiEventStreamXConsumer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PostedEventsTable
+        - Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/yamanashi-event-stream-x-consumer:*'
+      Tags:
+        Application: yamanashi-event-stream-x
+        Component: event-consumer
+
+  # CloudWatch Log Group for Lambda function
+  EventConsumerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${EventConsumerFunction}'
+      RetentionInDays: 14
+      Tags:
+        - Key: Application
+          Value: yamanashi-event-stream-x
+        - Key: Component
+          Value: logs
+
+Outputs:
+  EventConsumerFunction:
+    Description: 'Event Consumer Lambda Function ARN'
+    Value: !GetAtt EventConsumerFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-EventConsumerFunction'
+  
+  PostedEventsTable:
+    Description: 'DynamoDB Table for Posted Events'
+    Value: !Ref PostedEventsTable
+    Export:
+      Name: !Sub '${AWS::StackName}-PostedEventsTable'
+  
+  PostedEventsTableArn:
+    Description: 'DynamoDB Table ARN for Posted Events'
+    Value: !GetAtt PostedEventsTable.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-PostedEventsTableArn'
