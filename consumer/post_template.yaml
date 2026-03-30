@@ -1,0 +1,38 @@
+# X投稿のテンプレート設定
+template:
+  # 基本的な投稿フォーマット
+  header: "🆕✨山梨の新着イベント情報"
+  
+  # 必須要素のテンプレート（{変数名}で変数を指定）
+  required_format: |
+    {header}
+    
+    {title}
+    🗓️{formatted_date}
+    {event_url}{hash_tag_suffix}
+
+  # オプション要素のテンプレート
+  place_format: "📍{place}"
+  group_format: "👥{group_name}"
+  
+  # ハッシュタグの接頭辞/接尾辞
+  hash_tag:
+    prefix: ""
+    suffix: " {hash_tag}"
+    
+# 文字数制限
+limits:
+  max_length: 280
+  truncate_suffix: "..."
+
+# フォーマット設定
+formatting:
+  # 日付フォーマットの曜日表記
+  weekdays: ["月", "火", "水", "木", "金", "土", "日"]
+  
+  # 改行の処理
+  preserve_empty_lines: true
+  
+  # 日付フォーマットの年表示ルール
+  # - 現在の年と同じ場合: "3/30(月) 19:00-"
+  # - 異なる年の場合: "2027/2/1(月) 9:00-"
