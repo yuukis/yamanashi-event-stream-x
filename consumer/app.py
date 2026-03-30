@@ -24,10 +24,18 @@ LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
 logging.basicConfig(level=getattr(logging, LOG_LEVEL, logging.INFO))
 logger = logging.getLogger(__name__)
 
-# Initialize AWS clients
-dynamodb = boto3.resource('dynamodb')
-table_name = os.getenv('TABLE_NAME', 'posted_events')
-table = dynamodb.Table(table_name)
+# AWS clients - initialized lazily
+_dynamodb = None
+_table = None
+
+def get_dynamodb_table():
+    """Get DynamoDB table with lazy initialization."""
+    global _dynamodb, _table
+    if _table is None:
+        _dynamodb = boto3.resource('dynamodb')
+        table_name = os.getenv('TABLE_NAME', 'posted_events')
+        _table = _dynamodb.Table(table_name)
+    return _table
 
 # Twitter API configuration
 X_API_KEY = os.getenv('X_API_KEY')
@@ -128,6 +136,7 @@ def validate_detail(detail: Dict[str, Any]) -> None:
 def is_posted(uid: str) -> bool:
     """Check if event is already posted by looking up DynamoDB."""
     try:
+        table = get_dynamodb_table()
         response = table.get_item(Key={'uid': uid})
         return 'Item' in response
     except ClientError as e:
@@ -345,6 +354,7 @@ def mark_posted(detail: Dict[str, Any]) -> None:
         if detail.get('group_key'):
             item['group_key'] = detail['group_key']
         
+        table = get_dynamodb_table()
         table.put_item(Item=item)
         logger.debug(f"Saved to DynamoDB: {item}")
         

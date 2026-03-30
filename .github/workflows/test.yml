@@ -48,10 +48,20 @@ jobs:
         python tests/test_core.py
 
     - name: Run template functionality tests
+      env:
+        AWS_DEFAULT_REGION: us-east-1
+        AWS_ACCESS_KEY_ID: dummy
+        AWS_SECRET_ACCESS_KEY: dummy
+        TABLE_NAME: test_posted_events
       run: |
         python tests/test_template.py
 
     - name: Test import without X API dependencies
+      env:
+        AWS_DEFAULT_REGION: us-east-1
+        AWS_ACCESS_KEY_ID: dummy
+        AWS_SECRET_ACCESS_KEY: dummy
+        TABLE_NAME: test_posted_events
       run: |
         python -c "
         import sys
