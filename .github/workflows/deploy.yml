@@ -76,9 +76,29 @@ jobs:
         # Option 1: Use OIDC (recommended)
         role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
         aws-region: ${{ env.AWS_REGION }}
+        role-session-name: GitHubActions-${{ github.run_number }}
         # Option 2: Use access keys (fallback)
         # aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         # aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    - name: Verify AWS credentials and debug info
+      run: |
+        echo "🔍 AWS Debug Information:"
+        echo "  AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}"
+        echo "  AWS_REGION: ${{ env.AWS_REGION }}"
+        echo "  GitHub Repository: ${{ github.repository }}"
+        echo "  GitHub Ref: ${{ github.ref }}"
+        echo "  GitHub Event: ${{ github.event_name }}"
+        
+        # Verify AWS credentials
+        aws sts get-caller-identity
+        
+        # Check IAM role details
+        ROLE_NAME=$(echo "${{ secrets.AWS_ROLE_ARN }}" | cut -d'/' -f2)
+        echo "  Role Name: $ROLE_NAME"
+        
+        # List attached policies
+        aws iam list-attached-role-policies --role-name "$ROLE_NAME" || echo "Could not list policies"
 
     - name: Update X API credentials in Parameter Store
       run: |
