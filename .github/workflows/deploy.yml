@@ -92,7 +92,7 @@ jobs:
         aws sts get-caller-identity
         
         # Check IAM role details
-        ROLE_NAME=$(echo "${{ secrets.AWS_ROLE_ARN }}" | cut -d'/' -f2)
+        ROLE_NAME=$(echo "${{ secrets.AWS_ROLE_TO_ASSUME }}" | cut -d'/' -f2)
         echo "  Role Name: $ROLE_NAME"
         
         # List attached policies
