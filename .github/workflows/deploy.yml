@@ -3,6 +3,34 @@ name: Deploy to AWS
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      skip_posting:
+        description: 'Skip posting to X (useful for initial deployment)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+        - 'false'
+        - 'true'
+      dry_run:
+        description: 'Dry run (log what would be posted without posting)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+        - 'false'
+        - 'true'
+      log_level:
+        description: 'Logging level'
+        required: false
+        default: 'INFO'
+        type: choice
+        options:
+        - 'DEBUG'
+        - 'INFO'
+        - 'WARNING'
+        - 'ERROR'
 
 env:
   AWS_REGION: ap-northeast-1
@@ -85,12 +113,31 @@ jobs:
 
     - name: SAM deploy
       run: |
+        # Set deployment parameters based on trigger and inputs
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          SKIP_POSTING="${{ github.event.inputs.skip_posting }}"
+          DRY_RUN="${{ github.event.inputs.dry_run }}"
+          LOG_LEVEL="${{ github.event.inputs.log_level }}"
+        else
+          # For automatic push deployment, use safe defaults
+          SKIP_POSTING="true"  # Skip posting on automatic deployments to avoid spam
+          DRY_RUN="false"
+          LOG_LEVEL="INFO"
+        fi
+        
+        echo "🚀 Deploying with parameters:"
+        echo "  - SkipPosting: $SKIP_POSTING"
+        echo "  - DryRun: $DRY_RUN"
+        echo "  - LogLevel: $LOG_LEVEL"
+        
         sam deploy \
           --template-file .aws-sam/build/template.yaml \
           --stack-name yamanashi-event-stream-x \
           --parameter-overrides \
             TableName=posted_events \
-            LogLevel=INFO \
+            LogLevel=$LOG_LEVEL \
+            SkipPosting=$SKIP_POSTING \
+            DryRun=$DRY_RUN \
           --capabilities CAPABILITY_IAM \
           --region ${{ env.AWS_REGION }} \
           --no-confirm-changeset \
@@ -108,8 +155,35 @@ jobs:
 
     - name: Deployment summary
       run: |
+        # Set parameters for summary
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          SKIP_POSTING="${{ github.event.inputs.skip_posting }}"
+          DRY_RUN="${{ github.event.inputs.dry_run }}" 
+          LOG_LEVEL="${{ github.event.inputs.log_level }}"
+          TRIGGER="Manual (workflow_dispatch)"
+        else
+          SKIP_POSTING="true"
+          DRY_RUN="false"
+          LOG_LEVEL="INFO"
+          TRIGGER="Automatic (push to main)"
+        fi
+        
         echo "## 🚀 Deployment Complete" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "- **Stack Name**: yamanashi-event-stream-x" >> $GITHUB_STEP_SUMMARY
         echo "- **Region**: ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Trigger**: $TRIGGER" >> $GITHUB_STEP_SUMMARY
         echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Configuration:" >> $GITHUB_STEP_SUMMARY
+        echo "- **Skip Posting**: $SKIP_POSTING" >> $GITHUB_STEP_SUMMARY
+        echo "- **Dry Run**: $DRY_RUN" >> $GITHUB_STEP_SUMMARY
+        echo "- **Log Level**: $LOG_LEVEL" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "$SKIP_POSTING" = "true" ]; then
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ **Note**: Posting to X is disabled. To enable posting:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Go to Actions tab" >> $GITHUB_STEP_SUMMARY
+          echo "2. Run 'Deploy to AWS' workflow manually" >> $GITHUB_STEP_SUMMARY
+          echo "3. Set 'Skip posting to X' to 'false'" >> $GITHUB_STEP_SUMMARY
+        fi

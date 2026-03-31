@@ -18,6 +18,16 @@ Parameters:
     Default: INFO
     AllowedValues: [DEBUG, INFO, WARNING, ERROR, CRITICAL]
     Description: Logging level for Lambda function
+  SkipPosting:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Skip posting to X (useful for initial deployment to avoid spam)
+  DryRun:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Log what would be posted without actually posting to X
 
 Resources:
   # DynamoDB Table for tracking posted events
@@ -52,6 +62,8 @@ Resources:
         Variables:
           TABLE_NAME: !Ref TableName
           LOG_LEVEL: !Ref LogLevel
+          SKIP_POSTING: !Ref SkipPosting
+          DRY_RUN: !Ref DryRun
           # X API credentials from Parameter Store
           X_API_KEY: '{{resolve:ssm:/yamanashi-event-stream-x/x-api-key:1}}'
           X_API_SECRET: '{{resolve:ssm:/yamanashi-event-stream-x/x-api-secret:1}}'

@@ -43,6 +43,10 @@ X_API_SECRET = os.getenv('X_API_SECRET')
 X_ACCESS_TOKEN = os.getenv('X_ACCESS_TOKEN')
 X_ACCESS_TOKEN_SECRET = os.getenv('X_ACCESS_TOKEN_SECRET')
 
+# Posting control configuration
+SKIP_POSTING = os.getenv('SKIP_POSTING', 'false').lower() == 'true'
+DRY_RUN = os.getenv('DRY_RUN', 'false').lower() == 'true'
+
 # X post length limit  
 X_MAX_LENGTH = 280
 
@@ -94,15 +98,22 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         logger.info(f"Post text length: {len(post_text)}")
         logger.debug(f"Post text: {post_text}")
         
-        # Post to X
-        post_to_x(post_text)
-        logger.info("Posted to X successfully")
+        # Check posting control flags
+        if SKIP_POSTING:
+            logger.info("Posting skipped due to SKIP_POSTING=true (initial deployment mode)")
+        elif DRY_RUN:
+            logger.info("DRY RUN mode - would post to X:")
+            logger.info(post_text)
+        else:
+            # Post to X
+            post_to_x(post_text)
+            logger.info("Posted to X successfully")
         
-        # Mark as posted in DynamoDB
+        # Mark as posted in DynamoDB (always record even if posting is skipped)
         mark_posted(detail)
         logger.info(f"Marked {uid} as posted")
         
-        return {'statusCode': 200, 'body': 'posted'}
+        return {'statusCode': 200, 'body': 'posted' if not (SKIP_POSTING or DRY_RUN) else 'skipped'}
         
     except Exception as e:
         logger.error(f"Failed to process event: {str(e)}", exc_info=True)
