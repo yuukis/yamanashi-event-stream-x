@@ -70,23 +70,6 @@ jobs:
         pip install --prefer-binary --no-cache-dir -r consumer/requirements.txt
         pip install aws-sam-cli
 
-    - name: Debug GitHub context (before AWS auth)
-      run: |
-        echo "🔍 GitHub Context Information (before AWS authentication):"
-        echo "  Repository: ${{ github.repository }}"
-        echo "  Ref: ${{ github.ref }}"
-        echo "  Event: ${{ github.event_name }}"
-        echo "  Actor: ${{ github.actor }}"
-        echo "  SHA: ${{ github.sha }}"
-        echo "  Run ID: ${{ github.run_id }}"
-        echo "  Run Number: ${{ github.run_number }}"
-        echo ""
-        echo "Expected trust policy subject should be:"
-        echo "  repo:${{ github.repository }}:ref:refs/heads/main"
-        echo ""
-        echo "Current AWS_ROLE_ARN (masked for security):"
-        echo "  $(echo '${{ secrets.AWS_ROLE_ARN }}' | sed 's/[0-9]/X/g')"
-
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
