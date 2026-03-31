@@ -28,6 +28,22 @@ Parameters:
     Default: 'false'
     AllowedValues: ['true', 'false']
     Description: Log what would be posted without actually posting to X
+  XApiKey:
+    Type: String
+    NoEcho: true
+    Description: X API Key
+  XApiSecret:
+    Type: String
+    NoEcho: true
+    Description: X API Secret
+  XAccessToken:
+    Type: String
+    NoEcho: true
+    Description: X Access Token
+  XAccessTokenSecret:
+    Type: String
+    NoEcho: true
+    Description: X Access Token Secret
 
 Resources:
   # DynamoDB Table for tracking posted events
@@ -64,11 +80,10 @@ Resources:
           LOG_LEVEL: !Ref LogLevel
           SKIP_POSTING: !Ref SkipPosting
           DRY_RUN: !Ref DryRun
-          # X API credentials from Parameter Store
-          X_API_KEY: '{{resolve:ssm:/yamanashi-event-stream-x/x-api-key:1}}'
-          X_API_SECRET: '{{resolve:ssm:/yamanashi-event-stream-x/x-api-secret:1}}'
-          X_ACCESS_TOKEN: '{{resolve:ssm:/yamanashi-event-stream-x/x-access-token:1}}'
-          X_ACCESS_TOKEN_SECRET: '{{resolve:ssm:/yamanashi-event-stream-x/x-access-token-secret:1}}'
+          X_API_KEY: !Ref XApiKey
+          X_API_SECRET: !Ref XApiSecret
+          X_ACCESS_TOKEN: !Ref XAccessToken
+          X_ACCESS_TOKEN_SECRET: !Ref XAccessTokenSecret
       Events:
         YamanashiEventCreated:
           Type: EventBridgeRule

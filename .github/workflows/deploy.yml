@@ -98,33 +98,6 @@ jobs:
         # List attached policies
         aws iam list-attached-role-policies --role-name "$ROLE_NAME" || echo "Could not list policies"
 
-    - name: Update X API credentials in Parameter Store
-      run: |
-        # Update X API credentials
-        aws ssm put-parameter \
-          --name "/yamanashi-event-stream-x/x-api-key" \
-          --value "${{ secrets.X_API_KEY }}" \
-          --type "SecureString" \
-          --overwrite
-        
-        aws ssm put-parameter \
-          --name "/yamanashi-event-stream-x/x-api-secret" \
-          --value "${{ secrets.X_API_SECRET }}" \
-          --type "SecureString" \
-          --overwrite
-        
-        aws ssm put-parameter \
-          --name "/yamanashi-event-stream-x/x-access-token" \
-          --value "${{ secrets.X_ACCESS_TOKEN }}" \
-          --type "SecureString" \
-          --overwrite
-        
-        aws ssm put-parameter \
-          --name "/yamanashi-event-stream-x/x-access-token-secret" \
-          --value "${{ secrets.X_ACCESS_TOKEN_SECRET }}" \
-          --type "SecureString" \
-          --overwrite
-
     - name: SAM build
       run: |
         sam build --template template.yaml
@@ -156,6 +129,10 @@ jobs:
             LogLevel=$LOG_LEVEL \
             SkipPosting=$SKIP_POSTING \
             DryRun=$DRY_RUN \
+            XApiKey="${{ secrets.X_API_KEY }}" \
+            XApiSecret="${{ secrets.X_API_SECRET }}" \
+            XAccessToken="${{ secrets.X_ACCESS_TOKEN }}" \
+            XAccessTokenSecret="${{ secrets.X_ACCESS_TOKEN_SECRET }}" \
           --capabilities CAPABILITY_IAM \
           --region ${{ env.AWS_REGION }} \
           --no-confirm-changeset \
