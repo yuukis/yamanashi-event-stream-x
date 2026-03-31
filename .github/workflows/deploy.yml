@@ -73,18 +73,14 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        # Option 1: Use OIDC (recommended)
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        role-session-name: GitHubActions-SAMDeploy
         aws-region: ${{ env.AWS_REGION }}
-        role-session-name: GitHubActions-${{ github.run_number }}
-        # Option 2: Use access keys (fallback)
-        # aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        # aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
     - name: Verify AWS credentials and debug info
       run: |
         echo "🔍 AWS Debug Information:"
-        echo "  AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}"
+        echo "  AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}"
         echo "  AWS_REGION: ${{ env.AWS_REGION }}"
         echo "  GitHub Repository: ${{ github.repository }}"
         echo "  GitHub Ref: ${{ github.ref }}"
