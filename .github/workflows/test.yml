@@ -1,0 +1,111 @@
+name: Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.12]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libyaml-dev python3-dev build-essential
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('consumer/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel cython
+        pip install --prefer-binary --no-cache-dir -r consumer/requirements.txt
+
+    - name: Basic syntax check
+      run: |
+        python -m py_compile consumer/app.py
+
+    - name: Run core function tests
+      run: |
+        python tests/test_core.py
+
+    - name: Run template functionality tests
+      env:
+        AWS_DEFAULT_REGION: us-east-1
+        AWS_ACCESS_KEY_ID: dummy
+        AWS_SECRET_ACCESS_KEY: dummy
+        TABLE_NAME: test_posted_events
+      run: |
+        python tests/test_template.py
+
+    - name: Test import without X API dependencies
+      env:
+        AWS_DEFAULT_REGION: us-east-1
+        AWS_ACCESS_KEY_ID: dummy
+        AWS_SECRET_ACCESS_KEY: dummy
+        TABLE_NAME: test_posted_events
+      run: |
+        python -c "
+        import sys
+        sys.path.insert(0, 'consumer')
+        
+        # Test that we can import core functions
+        from app import (
+          build_post_text,
+          format_started_at,
+          truncate_text,
+          validate_detail,
+          extract_detail
+        )
+        print('✅ Core functions import successfully')
+        
+        # Test sample data processing
+        sample_detail = {
+          'uid': 'test-123',
+          'title': 'Test Event',
+          'event_url': 'https://example.com',
+          'started_at': '2026-03-20T19:00:00+09:00'
+        }
+        
+        validate_detail(sample_detail)
+        post_text = build_post_text(sample_detail)
+        print(f'✅ Generated post text ({len(post_text)} chars)')
+        
+        if len(post_text) <= 280:
+          print('✅ Text length within X limits')
+        else:
+          sys.exit(1)
+        "
+
+    - name: SAM build test
+      env:
+        AWS_DEFAULT_REGION: us-east-1
+        AWS_ACCESS_KEY_ID: dummy
+        AWS_SECRET_ACCESS_KEY: dummy
+      run: |
+        # Install AWS SAM CLI
+        pip install aws-sam-cli
+        
+        # Validate template
+        sam validate --template template.yaml
+
+        # Build test
+        sam build --template template.yaml
