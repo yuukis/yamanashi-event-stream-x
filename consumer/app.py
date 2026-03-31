@@ -44,7 +44,6 @@ X_ACCESS_TOKEN = os.getenv('X_ACCESS_TOKEN')
 X_ACCESS_TOKEN_SECRET = os.getenv('X_ACCESS_TOKEN_SECRET')
 
 # Posting control configuration
-SKIP_POSTING = os.getenv('SKIP_POSTING', 'false').lower() == 'true'
 DRY_RUN = os.getenv('DRY_RUN', 'false').lower() == 'true'
 
 # X post length limit  
@@ -99,9 +98,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         logger.debug(f"Post text: {post_text}")
         
         # Check posting control flags
-        if SKIP_POSTING:
-            logger.info("Posting skipped due to SKIP_POSTING=true (initial deployment mode)")
-        elif DRY_RUN:
+        if DRY_RUN:
             logger.info("DRY RUN mode - would post to X:")
             logger.info(post_text)
         else:
@@ -113,7 +110,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         mark_posted(detail)
         logger.info(f"Marked {uid} as posted")
         
-        return {'statusCode': 200, 'body': 'posted' if not (SKIP_POSTING or DRY_RUN) else 'skipped'}
+        return {'statusCode': 200, 'body': 'posted' if not DRY_RUN else 'skipped'}
         
     except Exception as e:
         logger.error(f"Failed to process event: {str(e)}", exc_info=True)

@@ -5,14 +5,6 @@ on:
     branches: [ main ]
   workflow_dispatch:
     inputs:
-      skip_posting:
-        description: 'Skip posting to X (useful for initial deployment)'
-        required: false
-        default: 'false'
-        type: choice
-        options:
-        - 'false'
-        - 'true'
       dry_run:
         description: 'Dry run (log what would be posted without posting)'
         required: false
@@ -106,18 +98,16 @@ jobs:
       run: |
         # Set deployment parameters based on trigger and inputs
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          SKIP_POSTING="${{ github.event.inputs.skip_posting }}"
           DRY_RUN="${{ github.event.inputs.dry_run }}"
           LOG_LEVEL="${{ github.event.inputs.log_level }}"
         else
           # For automatic push deployment, use safe defaults
-          SKIP_POSTING="true"  # Skip posting on automatic deployments to avoid spam
           DRY_RUN="false"
           LOG_LEVEL="INFO"
         fi
         
         echo "🚀 Deploying with parameters:"
-        echo "  - SkipPosting: $SKIP_POSTING"
+
         echo "  - DryRun: $DRY_RUN"
         echo "  - LogLevel: $LOG_LEVEL"
         
@@ -127,7 +117,6 @@ jobs:
           --parameter-overrides \
             TableName=posted_events \
             LogLevel=$LOG_LEVEL \
-            SkipPosting=$SKIP_POSTING \
             DryRun=$DRY_RUN \
             XApiKey="${{ secrets.X_API_KEY }}" \
             XApiSecret="${{ secrets.X_API_SECRET }}" \
@@ -152,14 +141,16 @@ jobs:
       run: |
         # Set parameters for summary
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          SKIP_POSTING="${{ github.event.inputs.skip_posting }}"
           DRY_RUN="${{ github.event.inputs.dry_run }}" 
           LOG_LEVEL="${{ github.event.inputs.log_level }}"
+          TEST_POST="${{ github.event.inputs.test_post }}"
+          TEST_MESSAGE="${{ github.event.inputs.test_message }}"
           TRIGGER="Manual (workflow_dispatch)"
         else
-          SKIP_POSTING="true"
           DRY_RUN="false"
           LOG_LEVEL="INFO"
+          TEST_POST="false"
+          TEST_MESSAGE="N/A"
           TRIGGER="Automatic (push to main)"
         fi
         
@@ -171,14 +162,24 @@ jobs:
         echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Configuration:" >> $GITHUB_STEP_SUMMARY
-        echo "- **Skip Posting**: $SKIP_POSTING" >> $GITHUB_STEP_SUMMARY
         echo "- **Dry Run**: $DRY_RUN" >> $GITHUB_STEP_SUMMARY
         echo "- **Log Level**: $LOG_LEVEL" >> $GITHUB_STEP_SUMMARY
         
-        if [ "$SKIP_POSTING" = "true" ]; then
+        if [ "$TEST_POST" = "true" ]; then
+          echo "- **Test Post**: ✅ Executed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Message**: $TEST_MESSAGE" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "$DRY_RUN" = "true" ]; then
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "⚠️ **Note**: Posting to X is disabled. To enable posting:" >> $GITHUB_STEP_SUMMARY
-          echo "1. Go to Actions tab" >> $GITHUB_STEP_SUMMARY
-          echo "2. Run 'Deploy to AWS' workflow manually" >> $GITHUB_STEP_SUMMARY
-          echo "3. Set 'Skip posting to X' to 'false'" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ **Note**: Dry run mode - no actual posting to X" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🧪 Test X Posting:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Go to **Actions** → **Deploy to AWS** → **Run workflow**" >> $GITHUB_STEP_SUMMARY
+          echo "2. Set **Send a test post to X**: \`true\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. Optionally customize the **test message**" >> $GITHUB_STEP_SUMMARY
+          echo "4. Run workflow and check your X account!" >> $GITHUB_STEP_SUMMARY
         fi
