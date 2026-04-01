@@ -118,6 +118,7 @@ jobs:
             TableName=posted_events \
             LogLevel=$LOG_LEVEL \
             DryRun=$DRY_RUN \
+            EventBusName=yamanashi-events \
             XApiKey="${{ secrets.X_API_KEY }}" \
             XApiSecret="${{ secrets.X_API_SECRET }}" \
             XAccessToken="${{ secrets.X_ACCESS_TOKEN }}" \

@@ -23,6 +23,10 @@ Parameters:
     Default: 'false'
     AllowedValues: ['true', 'false']
     Description: Log what would be posted without actually posting to X
+  EventBusName:
+    Type: String
+    Default: yamanashi-events
+    Description: EventBridge custom event bus name
   XApiKey:
     Type: String
     NoEcho: true
@@ -82,6 +86,7 @@ Resources:
         YamanashiEventCreated:
           Type: EventBridgeRule
           Properties:
+            EventBusName: !Ref EventBusName
             Pattern:
               source:
                 - yamanashi.tech.events
