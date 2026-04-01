@@ -52,24 +52,22 @@ X_MAX_LENGTH = 280
 # Template configuration
 TEMPLATE_CONFIG = None
 
-def load_template_config() -> Dict[str, Any]:
-    """Load template configuration from YAML file."""
-    template_path = Path(__file__).parent / "post_template.yaml"
-    
-    try:
-        with open(template_path, 'r', encoding='utf-8') as f:
-            config = yaml.safe_load(f)
-        logger.info("Template configuration loaded successfully")
-        return config
-    except FileNotFoundError:
-        logger.error(f"Template file not found: {template_path}")
-        raise
-    except Exception as e:
-        logger.error(f"Failed to load template configuration: {e}")
-        raise
-
-# Load template configuration at startup
-TEMPLATE_CONFIG = load_template_config()
+def get_template_config() -> Dict[str, Any]:
+    """Get template configuration with lazy loading."""
+    global TEMPLATE_CONFIG
+    if TEMPLATE_CONFIG is None:
+        template_path = Path(__file__).parent / "post_template.yaml"
+        try:
+            with open(template_path, 'r', encoding='utf-8') as f:
+                TEMPLATE_CONFIG = yaml.safe_load(f)
+            logger.info("Template configuration loaded successfully")
+        except FileNotFoundError:
+            logger.error(f"Template file not found: {template_path}")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to load template configuration: {e}")
+            raise
+    return TEMPLATE_CONFIG
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -154,8 +152,9 @@ def is_posted(uid: str) -> bool:
 
 def build_post_text(detail: Dict[str, Any]) -> str:
     """Build post text according to the template configuration."""
-    template_config = TEMPLATE_CONFIG['template']
-    limits = TEMPLATE_CONFIG['limits']
+    config = get_template_config()
+    template_config = config['template']
+    limits = config['limits']
     
     # Required components from template
     header = template_config['header']
@@ -216,7 +215,8 @@ def format_started_at(started_at: str) -> str:
         current_year = current_jst.year
         
         # Get weekdays from template config
-        formatting_config = TEMPLATE_CONFIG.get('formatting', {})
+        config = get_template_config()
+        formatting_config = config.get('formatting', {})
         weekdays = formatting_config.get('weekdays', ['月', '火', '水', '木', '金', '土', '日'])
         weekday = weekdays[jst_dt.weekday()]
         
@@ -307,7 +307,8 @@ def truncate_text(text: str, max_length: int) -> str:
         return essential_text
     
     # Last resort: truncate title
-    limits = TEMPLATE_CONFIG.get('limits', {})
+    config = get_template_config()
+    limits = config.get('limits', {})
     truncate_suffix = limits.get('truncate_suffix', '...')
     available_length = max_length - len("\n".join([header, "", "", date_line, url_line]))
     if available_length > 0 and len(title) > available_length:

@@ -9,7 +9,15 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
+
+# Mock dependencies before importing app to avoid dependency issues  
+sys.modules['boto3'] = MagicMock()
+sys.modules['tweepy'] = MagicMock()
+sys.modules['botocore.exceptions'] = MagicMock()
+
+# Import yaml for actual template loading
+import yaml
 
 # Add consumer directory to path to import app
 consumer_dir = Path(__file__).parent.parent / "consumer"
@@ -18,9 +26,9 @@ sys.path.insert(0, str(consumer_dir))
 try:
     import app
     TEMPLATE_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     TEMPLATE_AVAILABLE = False
-    print("Warning: Could not import app module - template tests will be skipped")
+    print(f"Warning: Could not import app module - template tests will be skipped: {e}")
 
 
 def test_template_config_loading():
@@ -32,14 +40,15 @@ def test_template_config_loading():
         return False
     
     try:
-        # Check that template config is loaded
-        assert app.TEMPLATE_CONFIG is not None, "Template config should not be None"
-        assert 'template' in app.TEMPLATE_CONFIG, "Template config should have 'template' key"
-        assert 'limits' in app.TEMPLATE_CONFIG, "Template config should have 'limits' key"
-        assert 'formatting' in app.TEMPLATE_CONFIG, "Template config should have 'formatting' key"
+        # Check that template config is loaded via function
+        template_config = app.get_template_config()
+        assert template_config is not None, "Template config should not be None"
+        assert 'template' in template_config, "Template config should have 'template' key"
+        assert 'limits' in template_config, "Template config should have 'limits' key"
+        assert 'formatting' in template_config, "Template config should have 'formatting' key"
         
         # Check template structure
-        template = app.TEMPLATE_CONFIG['template']
+        template = template_config['template']
         assert 'header' in template, "Template should have header"
         assert 'place_format' in template, "Template should have place_format"
         assert 'group_format' in template, "Template should have group_format"
@@ -186,7 +195,8 @@ def test_text_truncation():
         long_result = app.build_post_text(long_event)
         
         # Check that result is within character limit
-        max_length = app.TEMPLATE_CONFIG['limits']['max_length']
+        template_config = app.get_template_config()
+        max_length = template_config['limits']['max_length']
         assert len(long_result) <= max_length, f"Post length {len(long_result)} exceeds limit {max_length}"
         
         # Check that essential elements are preserved
