@@ -144,13 +144,20 @@ def test_post_text_generation():
         
         full_result = app.build_post_text(full_event)
         
-        # Check that all components are present
-        assert '🆕✨山梨の新着イベント情報' in full_result
-        assert 'Pythonもくもく会' in full_result
-        assert '📍山梨県立図書館' in full_result
-        assert '👥山梨Python会' in full_result
-        assert '🗓️3/30(月) 19:00-' in full_result
-        assert 'https://example.com/events/123 #yamanashi #python' in full_result
+        # Check exact post structure and order
+        expected_full_lines = [
+            '🆕✨山梨の新着イベント情報',
+            '',
+            'Pythonもくもく会',
+            '🗓️3/30(月) 19:00-',
+            '📍山梨県立図書館',
+            '👥山梨Python会',
+            'https://example.com/events/123 #yamanashi #python'
+        ]
+        expected_full = '\n'.join(expected_full_lines)
+        
+        assert full_result == expected_full, f"Full post order mismatch:\nExpected:\n{expected_full}\nActual:\n{full_result}"
+        print("✅ Full event post generation (order verified)")
         
         print("✅ Full event post generation")
         
