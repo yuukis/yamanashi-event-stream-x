@@ -1,4 +1,4 @@
-# Yamanashi Event Stream X Consumer
+# Yamanashi Tech Events Stream X Consumer
 
 AWS Lambda application that consumes Yamanashi event data from Amazon EventBridge and automatically posts to X (Twitter).
 
