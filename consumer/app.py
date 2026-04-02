@@ -173,17 +173,17 @@ def build_post_text(detail: Dict[str, Any]) -> str:
         hash_tag_config = template_config.get('hash_tag', {})
         hash_tag_suffix = hash_tag_config.get('suffix', " {hash_tag}").format(hash_tag=hash_tag)
     
-    # Build components list
+    # Build components list in desired order: title -> date -> place -> group -> URL
     components = [header, "", title, f"🗓️{formatted_date}"]
     
-    # Add optional components using templates
+    # Add optional components in specific order
     if place:
         place_line = template_config['place_format'].format(place=place)
-        components.insert(-1, place_line)  # Insert before URL
+        components.append(place_line)
     
     if group_name:
         group_line = template_config['group_format'].format(group_name=group_name)
-        components.insert(-1, group_line)  # Insert before URL
+        components.append(group_line)
     
     # Add URL line
     components.append(event_url + hash_tag_suffix)
