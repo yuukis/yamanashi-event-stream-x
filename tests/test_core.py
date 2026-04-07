@@ -7,6 +7,34 @@ This avoids tweepy compatibility issues with Python 3.14+.
 import json
 import os
 from datetime import datetime
+from typing import Optional
+
+
+def normalize_hashtag(hashtag: Optional[str]) -> Optional[str]:
+    """Normalize hashtag by ensuring each word starts with #."""
+    if not hashtag:
+        return None
+    
+    hashtag_stripped = hashtag.strip()
+    if not hashtag_stripped:
+        return None
+    
+    # Split by whitespace and process each word
+    words = hashtag_stripped.split()
+    normalized_words = []
+    
+    for word in words:
+        word = word.strip()
+        if word:  # Skip empty words
+            if not word.startswith('#'):
+                normalized_words.append(f"#{word}")
+            else:
+                normalized_words.append(word)
+    
+    if not normalized_words:
+        return None
+    
+    return ' '.join(normalized_words)
 
 
 def format_started_at(started_at: str) -> str:
@@ -55,7 +83,7 @@ def build_post_text(detail: dict) -> str:
     # Optional components
     place = detail.get('place') if detail.get('place') else None
     group_name = detail.get('group_name') if detail.get('group_name') else None
-    hash_tag = detail.get('hash_tag') if detail.get('hash_tag') else None
+    hash_tag = normalize_hashtag(detail.get('hash_tag'))
     
     # Build components list
     components = [
@@ -188,6 +216,41 @@ def extract_detail(event: dict) -> dict:
         raise ValueError("No detail found in event")
     
     return detail
+
+
+def test_hashtag_normalization():
+    """Test hashtag normalization function."""
+    print("=== Testing Hashtag Normalization ===")
+    
+    test_cases = [
+        # (input, expected_output, description)
+        ("#jawsug", "#jawsug", "Single hashtag with # - should remain unchanged"),
+        ("jawsug", "#jawsug", "Single hashtag without # - should be added"),
+        ("  #jawsug  ", "#jawsug", "With whitespace - should be trimmed"),
+        ("  jawsug  ", "#jawsug", "Missing # with whitespace - should add # and trim"),
+        ("", None, "Empty string - should return None"),
+        (None, None, "None input - should return None"),
+        ("   ", None, "Only whitespace - should return None"),
+        ("#jawsug #yamanashi", "#jawsug #yamanashi", "Multiple hashtags with # - should remain unchanged"),
+        ("jawsug yamanashi", "#jawsug #yamanashi", "Multiple hashtags without # - should add # to each"),
+        ("#jawsug yamanashi", "#jawsug #yamanashi", "Mixed hashtags - should add # to missing ones"),
+        ("jawsug #yamanashi", "#jawsug #yamanashi", "Mixed hashtags reverse - should add # to missing ones"),
+        ("jawsug yamanashi connpass", "#jawsug #yamanashi #connpass", "Three hashtags - should add # to all"),
+        ("#jawsug  yamanashi  #connpass", "#jawsug #yamanashi #connpass", "Multiple with extra spaces - should normalize"),
+        ("  jawsug    yamanashi  ", "#jawsug #yamanashi", "Extra spaces everywhere - should normalize"),
+    ]
+    
+    for input_hashtag, expected, description in test_cases:
+        result = normalize_hashtag(input_hashtag)
+        status = "✅" if result == expected else "❌"
+        print(f"{status} {description}")
+        print(f"   Input: {repr(input_hashtag)}")
+        print(f"   Expected: {repr(expected)}")
+        print(f"   Result: {repr(result)}")
+        
+        if result != expected:
+            print(f"   ERROR: Expected {repr(expected)}, got {repr(result)}")
+        print("-" * 50)
 
 
 def test_post_text_generation():
@@ -396,6 +459,8 @@ if __name__ == "__main__":
     print("")
     
     # Run all tests
+    test_hashtag_normalization()
+    print("\n")
     test_post_text_generation()
     print("\n")
     
