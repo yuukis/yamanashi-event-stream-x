@@ -150,6 +150,33 @@ def is_posted(uid: str) -> bool:
         return False
 
 
+def normalize_hashtag(hashtag: Optional[str]) -> Optional[str]:
+    """Normalize hashtag by ensuring each word starts with #."""
+    if not hashtag:
+        return None
+    
+    hashtag_stripped = hashtag.strip()
+    if not hashtag_stripped:
+        return None
+    
+    # Split by whitespace and process each word
+    words = hashtag_stripped.split()
+    normalized_words = []
+    
+    for word in words:
+        word = word.strip()
+        if word:  # Skip empty words
+            if not word.startswith('#'):
+                normalized_words.append(f"#{word}")
+            else:
+                normalized_words.append(word)
+    
+    if not normalized_words:
+        return None
+    
+    return ' '.join(normalized_words)
+
+
 def build_post_text(detail: Dict[str, Any]) -> str:
     """Build post text according to the template configuration."""
     config = get_template_config()
@@ -165,7 +192,7 @@ def build_post_text(detail: Dict[str, Any]) -> str:
     # Optional components
     place = detail.get('place') if detail.get('place') else None
     group_name = detail.get('group_name') if detail.get('group_name') else None
-    hash_tag = detail.get('hash_tag') if detail.get('hash_tag') else None
+    hash_tag = normalize_hashtag(detail.get('hash_tag'))
     
     # Build hash tag suffix
     hash_tag_suffix = ""
